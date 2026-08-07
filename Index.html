@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Taller 3D & Láser</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen pb-24">
+
+    <!-- Encabezado -->
+    <header class="bg-slate-800 p-4 border-b border-slate-700 sticky top-0 z-10 shadow-md">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                    <i class="fa-solid fa-layer-group text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm text-white">Taller 3D & Láser</h1>
+                    <p class="text-[10px] text-indigo-300">Conectado a Google Sheets 🟢</p>
+                </div>
+            </div>
+            <button onclick="cargarDatos()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-600 flex items-center gap-1">
+                <i class="fa-solid fa-rotate text-[10px]"></i> Actualizar
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-4">
+
+        <!-- Cartel de carga -->
+        <div id="cargando" class="bg-indigo-950/60 border border-indigo-700/50 p-3 rounded-xl text-center text-xs text-indigo-200">
+            <i class="fa-solid fa-spinner fa-spin mr-1"></i> Sincronizando con Google Sheets...
+        </div>
+
+        <!-- RESUMEN DE CUENTAS -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+                <p class="text-[10px] text-slate-400 font-medium">Cobrado</p>
+                <p class="text-sm font-extrabold text-emerald-400 mt-1" id="total-cobrado">$0</p>
+            </div>
+            <div class="bg-amber-950/30 p-2.5 rounded-xl border border-amber-600/40">
+                <p class="text-[10px] text-amber-300 font-medium">Por Cobrar</p>
+                <p class="text-sm font-extrabold text-amber-400 mt-1" id="total-pendiente">$0</p>
+            </div>
+            <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+                <p class="text-[10px] text-slate-400 font-medium">Gastos / Insumos</p>
+                <p class="text-sm font-extrabold text-rose-400 mt-1" id="total-compras">$0</p>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 1: VENTAS -->
+        <section id="sec-ventas" class="space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    <i class="fa-solid fa-hand-holding-dollar text-emerald-400 mr-1"></i> Ventas & Entregas
+                </h2>
+                <button onclick="abrirModal('venta')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1 shadow">
+                    <i class="fa-solid fa-plus"></i> Venta
+                </button>
+            </div>
+            <div id="lista-ventas" class="space-y-2 text-xs"></div>
+        </section>
+
+        <!-- SECCIÓN 2: COMPRAS -->
+        <section id="sec-compras" class="space-y-3 hidden">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    <i class="fa-solid fa-cart-shopping text-rose-400 mr-1"></i> Compras de Materia Prima
+                </h2>
+                <button onclick="abrirModal('compra')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1 shadow">
+                    <i class="fa-solid fa-plus"></i> Compra
+                </button>
+            </div>
+            <div id="lista-compras" class="space-y-2 text-xs"></div>
+        </section>
+
+        <!-- SECCIÓN 3: STOCK, MUESTRARIO & MERMAS -->
+        <section id="sec-stock" class="space-y-3 hidden">
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                        <i class="fa-solid fa-boxes-stacked text-indigo-400 mr-1"></i> Inventario Taller
+                    </h2>
+                    <button onclick="abrirModal('stock')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1 shadow">
+                        <i class="fa-solid fa-plus"></i> Cargar Pieza
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-3 bg-slate-800 p-1 rounded-lg border border-slate-700 text-[10px] text-center gap-1">
+                    <button id="subtab-venta" onclick="cambiarSubTabStock('venta')" class="py-1.5 rounded bg-indigo-600 text-white font-bold">
+                        📦 Venta
+                    </button>
+                    <button id="subtab-muestrario" onclick="cambiarSubTabStock('muestrario')" class="py-1.5 rounded text-slate-400 font-bold">
+                        🖼️ Muestras
+                    </button>
+                    <button id="subtab-merma" onclick="cambiarSubTabStock('merma')" class="py-1.5 rounded text-slate-400 font-bold">
+                        ⚠️ Mermas
+                    </button>
+                </div>
+            </div>
+
+            <div id="lista-stock-venta" class="grid grid-cols-2 gap-2 text-xs"></div>
+            <div id="lista-stock-muestrario" class="grid grid-cols-2 gap-2 text-xs hidden"></div>
+            <div id="lista-stock-merma" class="grid grid-cols-2 gap-2 text-xs hidden"></div>
+        </section>
+
+    </main>
+
+    <!-- NAVEGACIÓN INFERIOR -->
+    <nav class="fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 p-2 z-20">
+        <div class="max-w-md mx-auto grid grid-cols-3 gap-1">
+            <button id="tab-ventas" onclick="cambiarTab('ventas')" class="p-2 rounded-lg bg-indigo-600 text-white font-bold text-[11px] flex flex-col items-center gap-1">
+                <i class="fa-solid fa-receipt"></i> Ventas
+            </button>
+            <button id="tab-compras" onclick="cambiarTab('compras')" class="p-2 rounded-lg bg-slate-700 text-slate-400 font-bold text-[11px] flex flex-col items-center gap-1">
+                <i class="fa-solid fa-cart-flatbed"></i> Compras
+            </button>
+            <button id="tab-stock" onclick="cambiarTab('stock')" class="p-2 rounded-lg bg-slate-700 text-slate-400 font-bold text-[11px] flex flex-col items-center gap-1">
+                <i class="fa-solid fa-box text-yellow-400"></i> Inventario
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODALES DE CARGA -->
+    <div id="modal-venta" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl max-w-sm w-full p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h3 class="font-bold text-sm text-white">🟢 Registrar Venta</h3>
+                <button onclick="cerrarModales()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="guardarVenta(event)" class="space-y-2 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-0.5">Socio que atendió:</label>
+                    <input type="text" id="v-socio" placeholder="Ej: Juan" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-0.5">Cliente / Comprador:</label>
+                    <input type="text" id="v-cliente" placeholder="Ej: Club Juventud" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-0.5">Producto / Detalle:</label>
+                    <input type="text" id="v-producto" placeholder="Ej: 10 Llaveros grabados" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-400 mb-0.5">Monto Total ($):</label>
+                        <input type="number" id="v-monto" placeholder="20000" oninput="evaluarEstadoPago()" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-0.5">Estado Pago:</label>
+                        <select id="v-estado" onchange="evaluarEstadoPago()" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                            <option value="Ninguno">🔴 Ninguno (0%)</option>
+                            <option value="Parcial">🟡 Parcial (Seña)</option>
+                            <option value="Total">🟢 Total (100%)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="contenedor-pago-parcial" class="hidden bg-amber-950/40 p-2.5 rounded-lg border border-amber-600/40">
+                    <label class="block text-amber-300 font-bold mb-1">Monto entregado como Seña ($):</label>
+                    <input type="number" id="v-monto-pagado" placeholder="10000" class="w-full bg-slate-900 border border-amber-600/60 rounded p-2 text-white font-bold">
+                </div>
+                <button type="submit" id="btn-guardar-v" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-2.5 rounded-lg mt-2">Guardar Venta</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-compra" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl max-w-sm w-full p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h3 class="font-bold text-sm text-white">🔴 Registrar Compra / Gasto</h3>
+                <button onclick="cerrarModales()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="guardarCompra(event)" class="space-y-2 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-0.5">Socio comprador:</label>
+                    <input type="text" id="c-socio" placeholder="Ej: María" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-0.5">Insumo / Concepto:</label>
+                    <input type="text" id="c-concepto" placeholder="Ej: Rollo PLA Negro" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-0.5">Monto Gastado ($):</label>
+                    <input type="number" id="c-monto" placeholder="22000" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                </div>
+                <button type="submit" id="btn-guardar-c" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold p-2.5 rounded-lg mt-2">Guardar Compra</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-stock" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl max-w-sm w-full p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h3 class="font-bold text-sm text-white">📦 Cargar Registro de Inventario</h3>
+                <button onclick="cerrarModales()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="guardarStock(event)" class="space-y-2 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-0.5">Tipo de Registro:</label>
+                    <select id="s-tipo" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white font-bold">
+                        <option value="venta">📦 Para Venta (Stock Activo)</option>
+                        <option value="muestrario">🖼️ Muestrario / Exposición</option>
+                        <option value="merma">⚠️ Merma / Pieza Fallada</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-0.5">Nombre / Motivo:</label>
+                    <input type="text" id="s-nombre" placeholder="Ej: Maceta 3D (Despegada)" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-0.5">Cantidad de Piezas:</label>
+                    <input type="number" id="s-cantidad" placeholder="1" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+                </div>
+                <button type="submit" id="btn-guardar-s" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-2.5 rounded-lg mt-2">Guardar Registro</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const URL_API = "https://script.google.com/macros/s/AKfycbz5QQpaPkDSPFsh5R9oJrCPaeLuI4BCazDRYtrFFyC81R4ax68CAgxWjMMItAaNUyqyAw/exec";
+
+        let ventas = [];
+        let compras = [];
+        let inventario = [];
+
+        async function cargarDatos() {
+            document.getElementById('cargando').classList.remove('hidden');
+            try {
+                const resp = await fetch(URL_API);
+                const data = await resp.json();
+                ventas = data.ventas || [];
+                compras = data.compras || [];
+                inventario = data.inventario || [];
+                actualizarUI();
+            } catch (err) {
+                console.error("Error al cargar datos:", err);
+            } finally {
+                document.getElementById('cargando').classList.add('hidden');
+            }
+        }
+
+        function actualizarUI() {
+            let totalCobrado = 0;
+            let totalPendiente = 0;
+            let totalCompras = 0;
+
+            // RENDER VENTAS
+            const listaVentas = document.getElementById('lista-ventas');
+            listaVentas.innerHTML = '';
+            
+            if (ventas.length === 0) {
+                listaVentas.innerHTML = `<p class="text-center text-slate-500 py-4">No hay ventas registradas en la planilla.</p>`;
+            }
+
+            ventas.forEach(v => {
+                const total = parseFloat(v.montototal || v.montoTotal || 0);
+                const pagado = parseFloat(v.montopagado || v.montoPagado || 0);
+                const estado = v.estado || 'Ninguno';
+
+                let cobradoItem = 0;
+                let pendienteItem = 0;
+
+                if (estado === 'Total') cobradoItem = total;
+                else if (estado === 'Ninguno') pendienteItem = total;
+                else if (estado === 'Parcial') {
+                    cobradoItem = pagado;
+                    pendienteItem = total - pagado;
+                }
+
+                totalCobrado += cobradoItem;
+                totalPendiente += pendienteItem;
+
+                let badgeColor = 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+                let badgeText = '🔴 NO PAGÓ';
+
+                if(estado === 'Total') {
+                    badgeColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+                    badgeText = '🟢 PAGADO TOTAL';
+                } else if (estado === 'Parcial') {
+                    badgeColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+                    badgeText = `🟡 SEÑA ($${cobradoItem.toLocaleString()})`;
+                }
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border flex justify-between items-center ${estado === 'Total' ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-800 border-slate-700'}`;
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-bold text-white text-xs">${v.cliente}</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded border font-bold ${badgeColor}">
+                                ${badgeText}
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-300">${v.producto}</p>
+                        <p class="text-[9px] text-slate-400">${v.socio} • ${v.fecha}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-extrabold text-xs text-white">$${total.toLocaleString()}</p>
+                        ${pendienteItem > 0 ? `<p class="text-[10px] font-bold text-amber-400">Debe: $${pendienteItem.toLocaleString()}</p>` : '<p class="text-[10px] text-emerald-400">Saldado</p>'}
+                    </div>
+                `;
+                listaVentas.appendChild(card);
+            });
+
+            // RENDER COMPRAS
+            const listaCompras = document.getElementById('lista-compras');
+            listaCompras.innerHTML = '';
+            
+            if (compras.length === 0) {
+                listaCompras.innerHTML = `<p class="text-center text-slate-500 py-4">No hay compras registradas en la planilla.</p>`;
+            }
+
+            compras.forEach(c => {
+                const monto = parseFloat(c.monto || 0);
+                totalCompras += monto;
+                const card = document.createElement('div');
+                card.className = "p-3 rounded-xl border border-slate-700 bg-slate-800 flex justify-between items-center";
+                card.innerHTML = `
+                    <div>
+                        <p class="font-bold text-white text-xs">${c.concepto}</p>
+                        <p class="text-[9px] text-slate-400">Compró: ${c.socio} • ${c.fecha}</p>
+                    </div>
+                    <p class="font-extrabold text-xs text-rose-400">-$${monto.toLocaleString()}</p>
+                `;
+                listaCompras.appendChild(card);
+            });
+
+            // RENDER INVENTARIO
+            const stockVenta = inventario.filter(i => (i.tipo || i.categoria) === 'venta');
+            const stockMuestrario = inventario.filter(i => (i.tipo || i.categoria) === 'muestrario');
+            const stockMerma = inventario.filter(i => (i.tipo || i.categoria) === 'merma');
+
+            renderSubStock('lista-stock-venta', stockVenta, 'indigo', 'unid.');
+            renderSubStock('lista-stock-muestrario', stockMuestrario, 'amber', 'muestras');
+            renderSubStock('lista-stock-merma', stockMerma, 'rose', 'falladas');
+
+            document.getElementById('total-cobrado').innerText = `$${totalCobrado.toLocaleString()}`;
+            document.getElementById('total-pendiente').innerText = `$${totalPendiente.toLocaleString()}`;
+            document.getElementById('total-compras').innerText = `$${totalCompras.toLocaleString()}`;
+        }
+
+        function renderSubStock(elementId, lista, color, sufijo) {
+            const cont = document.getElementById(elementId);
+            cont.innerHTML = '';
+            if (lista.length === 0) {
+                cont.innerHTML = `<p class="col-span-2 text-center text-slate-500 py-4">Sin registros.</p>`;
+                return;
+            }
+            lista.forEach(s => {
+                const card = document.createElement('div');
+                card.className = `bg-slate-800 p-3 rounded-xl border border-slate-700 text-center`;
+                card.innerHTML = `
+                    <p class="font-bold text-white text-xs mb-1">${s.nombre}</p>
+                    <p class="text-lg font-black text-${color}-400">${s.cantidad} <span class="text-[10px] text-slate-400 font-normal">${sufijo}</span></p>
+                `;
+                cont.appendChild(card);
+            });
+        }
+
+        async function enviarAAPI(payload, btnId) {
+            const btn = document.getElementById(btnId);
+            const textoOriginal = btn.innerText;
+            btn.innerText = "Guardando...";
+            btn.disabled = true;
+
+            try {
+                await fetch(URL_API, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                cerrarModales();
+                setTimeout(cargarDatos, 1500); // Re-carga tras dar tiempo al script
+            } catch (err) {
+                alert("Error guardando registro: " + err);
+            } finally {
+                btn.innerText = textoOriginal;
+                btn.disabled = false;
+            }
+        }
+
+        function evaluarEstadoPago() {
+            const estado = document.getElementById('v-estado').value;
+            const contenedor = document.getElementById('contenedor-pago-parcial');
+            if (estado === 'Parcial') contenedor.classList.remove('hidden');
+            else contenedor.classList.add('hidden');
+        }
+
+        function cambiarSubTabStock(tipo) {
+            ['venta', 'muestrario', 'merma'].forEach(t => {
+                document.getElementById(`lista-stock-${t}`).classList.add('hidden');
+                document.getElementById(`subtab-${t}`).className = "py-1.5 rounded text-slate-400 font-bold";
+            });
+            document.getElementById(`lista-stock-${tipo}`).classList.remove('hidden');
+            const colors = { venta: 'indigo', muestrario: 'amber', merma: 'rose' };
+            document.getElementById(`subtab-${tipo}`).className = `py-1.5 rounded bg-${colors[tipo]}-600 text-white font-bold`;
+        }
+
+        function cambiarTab(tab) {
+            ['ventas', 'compras', 'stock'].forEach(t => {
+                document.getElementById(`sec-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).className = "p-2 rounded-lg bg-slate-700 text-slate-400 font-bold text-[11px] flex flex-col items-center gap-1";
+            });
+            document.getElementById(`sec-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).className = "p-2 rounded-lg bg-indigo-600 text-white font-bold text-[11px] flex flex-col items-center gap-1";
+        }
+
+        function abrirModal(tipo) { document.getElementById(`modal-${tipo}`).classList.remove('hidden'); }
+        function cerrarModales() { 
+            ['venta', 'compra', 'stock'].forEach(t => document.getElementById(`modal-${t}`).classList.add('hidden')); 
+        }
+
+        function guardarVenta(e) {
+            e.preventDefault();
+            const hoy = new Date();
+            const total = parseFloat(document.getElementById('v-monto').value);
+            const estado = document.getElementById('v-estado').value;
+            let pagado = 0;
+            if (estado === 'Total') pagado = total;
+            if (estado === 'Parcial') pagado = parseFloat(document.getElementById('v-monto-pagado').value || 0);
+
+            const payload = {
+                tipoRegistro: 'venta',
+                id: Date.now(),
+                fecha: `${hoy.getDate()}/${hoy.getMonth()+1}`,
+                socio: document.getElementById('v-socio').value,
+                cliente: document.getElementById('v-cliente').value,
+                producto: document.getElementById('v-producto').value,
+                montoTotal: total,
+                montoPagado: pagado,
+                estado: estado
+            };
+
+            enviarAAPI(payload, 'btn-guardar-v');
+            e.target.reset();
+        }
+
+        function guardarCompra(e) {
+            e.preventDefault();
+            const hoy = new Date();
+            const payload = {
+                tipoRegistro: 'compra',
+                id: Date.now(),
+                fecha: `${hoy.getDate()}/${hoy.getMonth()+1}`,
+                socio: document.getElementById('c-socio').value,
+                concepto: document.getElementById('c-concepto').value,
+                monto: parseFloat(document.getElementById('c-monto').value)
+            };
+
+            enviarAAPI(payload, 'btn-guardar-c');
+            e.target.reset();
+        }
+
+        function guardarStock(e) {
+            e.preventDefault();
+            const payload = {
+                tipoRegistro: 'inventario',
+                id: Date.now(),
+                categoria: document.getElementById('s-tipo').value,
+                nombre: document.getElementById('s-nombre').value,
+                cantidad: parseInt(document.getElementById('s-cantidad').value)
+            };
+
+            enviarAAPI(payload, 'btn-guardar-s');
+            e.target.reset();
+        }
+
+        // Carga inicial al abrir
+        cargarDatos();
+    </script>
+</body>
+</html>
